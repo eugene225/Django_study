@@ -1,10 +1,11 @@
 # from django.http import HttpResponse
 from django.shortcuts import render, get_object_or_404, redirect
-from django.http import HttpResponseNotAllowed
+# from django.http import HttpResponseNotAllowed
 from .forms import QuestionForm, AnswerForm
 from django.utils import timezone
 from .models import Question
 from django.core.paginator import Paginator
+from django.contrib.auth.decorators import login_required
 
 
 def index(request):
@@ -22,22 +23,26 @@ def detail(request, question_id):
     return render(request, 'pybo/question_detail.html', context)
 
 
+@login_required(login_url='common:login')
 def answer_create(request, question_id):
     question = get_object_or_404(Question, pk=question_id)
     if request.method == "POST":
         form = AnswerForm(request.POST)
         if form.is_valid():
             answer = form.save(commit=False)
+            question.author = request.user
+            answer.author = request.user
             answer.create_date = timezone.now()
             answer.question = question
             answer.save()
             return redirect('pybo:detail', question_id=question.id)
     else:
-        return HttpResponseNotAllowed('Only POST is possible.')
+        form = AnswerForm()
     context = {'question': question, 'form': form}
     return render(request, 'pybo/question_detail.html', context)
 
 
+@login_required(login_url='common:login')
 def question_create(request):
     if request.method == 'POST':
         form = QuestionForm(request.POST)
